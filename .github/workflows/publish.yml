@@ -1,0 +1,43 @@
+name: Publish to crates.io
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Check if version is already published
+        id: version_check
+        run: |
+          CURRENT=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          PUBLISHED=$(cargo search dps --limit 1 2>/dev/null | grep '^dps ' | sed 's/.*"\(.*\)".*/\1/' || echo "none")
+          echo "published=$PUBLISHED" >> "$GITHUB_OUTPUT"
+          if [ "$CURRENT" = "$PUBLISHED" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Version $CURRENT is already on crates.io — skipping publish."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "New version $CURRENT (published: $PUBLISHED) — will publish."
+          fi
+
+      - name: Publish to crates.io
+        if: steps.version_check.outputs.skip == 'false'
+        run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}

@@ -1,6 +1,6 @@
 [package]
 name = "dps"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Debian Profile Sync — deploy a Proxmox LXC container and sync user profiles across Debian machines"
 license = "MIT"
