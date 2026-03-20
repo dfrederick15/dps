@@ -131,9 +131,12 @@ pub async fn destroy(client: &ProxmoxClient, node: &str, vmid: u32) -> Result<St
 
 /// Query the container's network interfaces to find its primary IPv4 address.
 pub async fn get_ip(client: &ProxmoxClient, node: &str, vmid: u32) -> Result<Option<String>> {
-    let data = client
-        .get(&format!("nodes/{node}/lxc/{vmid}/interfaces"))
-        .await?;
+    let data = match client.get(&format!("nodes/{node}/lxc/{vmid}/interfaces")).await {
+        Ok(v)  => v,
+        // 500 often means the guest agent isn't ready yet — treat as "no IP yet"
+        Err(Error::ProxmoxApi { status: 500, .. }) => return Ok(None),
+        Err(e) => return Err(e),
+    };
 
     if let Some(ifaces) = data.as_array() {
         for iface in ifaces {

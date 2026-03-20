@@ -186,7 +186,26 @@ impl ProxmoxClient {
 /// Unwrap the `{ "data": ... }` envelope that Proxmox wraps all responses in.
 async fn extract_data(resp: Response) -> Result<Value> {
     let status = resp.status();
-    let body: Value = resp.json().await?;
+
+    // Read the body as text first so we can provide a useful error on parse
+    // failure and handle the empty-body case (some endpoints return 200 + "").
+    let text = resp.text().await?;
+
+    if text.trim().is_empty() {
+        return if status.is_success() {
+            Ok(Value::Null)
+        } else {
+            Err(Error::ProxmoxApi { status: status.as_u16(), message: status.to_string() })
+        };
+    }
+
+    let body: Value = serde_json::from_str(&text).map_err(|e| {
+        let snippet = &text[..text.len().min(300)];
+        Error::ProxmoxApi {
+            status:  status.as_u16(),
+            message: format!("could not parse Proxmox response as JSON: {e} — body: {snippet}"),
+        }
+    })?;
 
     if status.is_success() {
         Ok(body["data"].clone())
@@ -204,9 +223,6 @@ async fn extract_data(resp: Response) -> Result<Value> {
             .or_else(|| body["message"].as_str().map(String::from))
             .unwrap_or_else(|| status.to_string());
 
-        Err(Error::ProxmoxApi {
-            status:  status.as_u16(),
-            message,
-        })
+        Err(Error::ProxmoxApi { status: status.as_u16(), message })
     }
 }
