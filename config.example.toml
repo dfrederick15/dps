@@ -1,0 +1,106 @@
+# dps — Debian Profile Sync
+# Copy to ~/.config/dps/config.toml and fill in your values.
+
+# ── Proxmox connection ────────────────────────────────────────────────────────
+[proxmox]
+host       = "192.168.1.10"   # Proxmox VE hostname or IP
+port       = 8006
+node       = "pve"            # Proxmox node name (shown in the web UI)
+verify_ssl = false            # set true when using a trusted cert
+
+# Authentication — choose ONE of the blocks below.
+# Option A: API token (recommended for automation)
+[proxmox.auth]
+type        = "token"
+user        = "root@pam"
+token_name  = "dps"           # PVE token ID
+token_value = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Option B: username + password  (comment out the block above, uncomment below)
+# [proxmox.auth]
+# type     = "password"
+# user     = "root"
+# realm    = "pam"
+# password = "secret"
+
+# ── LXC container ─────────────────────────────────────────────────────────────
+[container]
+vmid      = 200                                         # Proxmox container ID
+hostname  = "dps-sync"
+# Download the template first:  pveam download local debian-12-standard_12.7-1_amd64.tar.zst
+template  = "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+storage   = "local-lvm"       # Storage pool for the rootfs disk
+disk_size = "8G"
+memory    = 512               # MB
+cores     = 1
+# Root password used only during initial container setup, then key-only SSH is enforced.
+root_password = "change-me-immediately"
+
+[container.network]
+bridge  = "vmbr0"
+ip      = "dhcp"              # "dhcp" or "192.168.1.50/24"
+# gateway = "192.168.1.1"    # required when ip is static
+
+# ── Profile sync ──────────────────────────────────────────────────────────────
+[sync]
+# SSH public key injected into the container during setup.
+# Falls back to the first key found in ~/.ssh/ if omitted.
+# ssh_public_key_file = "~/.ssh/id_ed25519.pub"
+#
+# SSH *private* key used to connect to the container after setup.
+# ssh_identity_file = "~/.ssh/id_ed25519"
+ssh_port      = 22
+container_user = "root"
+
+# Paths to sync.  `local` supports shell tilde expansion.
+# remote is relative to /profiles/<local-username>/ on the container.
+[[sync.paths]]
+local  = "~/.bashrc"
+remote = ".bashrc"
+
+[[sync.paths]]
+local  = "~/.bash_profile"
+remote = ".bash_profile"
+
+[[sync.paths]]
+local  = "~/.profile"
+remote = ".profile"
+
+[[sync.paths]]
+local  = "~/.gitconfig"
+remote = ".gitconfig"
+
+[[sync.paths]]
+local  = "~/.config/nvim"
+remote = ".config/nvim"
+delete = true                 # Remove files on the destination that are gone locally
+
+[[sync.paths]]
+local  = "~/.config/fish"
+remote = ".config/fish"
+delete = true
+
+# rsync --exclude patterns applied globally
+exclude_patterns = [
+    ".git/",
+    "__pycache__/",
+    "*.pyc",
+    "node_modules/",
+    ".DS_Store",
+]
+
+# ── Tailscale (optional) ───────────────────────────────────────────────────────
+# Remove or comment out this entire section to disable Tailscale integration.
+# When enabled, dps will:
+#   • Install Tailscale inside the container during `dps setup`
+#   • Join your tailnet using the auth key below
+#   • Prefer the Tailscale IP (100.x.x.x) for all push/pull transfers so that
+#     syncing works from any network without exposing the Proxmox LAN
+#
+# Generate a reusable auth key at: https://login.tailscale.com/admin/settings/keys
+[tailscale]
+auth_key            = "tskey-auth-xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# hostname          = "dps-sync"     # defaults to container.hostname
+# tags              = ["tag:sync"]   # optional ACL tags
+prefer_tailscale_ip = true
+# container_ts_ip is written automatically by `dps setup` — do not set manually

@@ -1,0 +1,58 @@
+[package]
+name = "dps"
+version = "0.1.0"
+edition = "2021"
+description = "Debian Profile Sync — deploy a Proxmox LXC container and sync user profiles across Debian machines"
+license = "MIT"
+repository = "https://github.com/yourusername/dps"
+keywords = ["proxmox", "sync", "profile", "lxc", "rsync"]
+categories = ["command-line-utilities", "filesystem"]
+
+# ── Targets ───────────────────────────────────────────────────────────────────
+
+[lib]
+name = "dps"
+path = "src/lib.rs"
+
+[[bin]]
+name = "dps"
+path = "src/main.rs"
+
+[[bin]]
+name = "dps-daemon"
+path = "src/bin/dps-daemon.rs"
+
+# GUI binary — requires `--features gui` and GTK3 + appindicator system libs.
+# Debian: sudo apt install libgtk-3-dev libappindicator3-dev
+[[bin]]
+name = "dps-gui"
+path = "src/bin/dps-gui.rs"
+required-features = ["gui"]
+
+# ── Features ──────────────────────────────────────────────────────────────────
+
+[features]
+default = []
+gui = ["dep:eframe", "dep:egui", "dep:tray-icon"]
+
+# ── Dependencies ──────────────────────────────────────────────────────────────
+
+[dependencies]
+clap          = { version = "4",    features = ["derive", "env"] }
+tokio         = { version = "1",    features = ["full"] }
+reqwest       = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+serde         = { version = "1",    features = ["derive"] }
+serde_json    = "1"
+toml          = "0.8"
+anyhow        = "1"
+thiserror     = "1"
+tracing       = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dirs          = "5"
+notify        = "6"
+rpassword     = "7"
+
+# GUI (optional — activated by --features gui)
+eframe     = { version = "0.29", optional = true }
+egui       = { version = "0.29", optional = true }
+tray-icon  = { version = "0.17", optional = true }

@@ -1,0 +1,28 @@
+# dps-gui — system-tray control panel autostart entry
+#
+# Install to start the tray app on login:
+#
+#   mkdir -p ~/.config/autostart
+#   cp dps-gui.desktop ~/.config/autostart/
+#
+# Or for GNOME: gnome-session-properties → Add
+# The binary must be installed first:
+#   install -Dm755 target/release/dps-gui ~/.local/bin/dps-gui
+
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=dps GUI
+GenericName=Profile Sync Tray
+Comment=Debian Profile Sync — system tray control panel
+# Full path avoids PATH lookup issues in some desktop environments
+Exec=%u/.local/bin/dps-gui
+Icon=folder-sync
+Terminal=false
+Categories=System;Utility;
+Keywords=sync;profile;backup;
+
+# Auto-start on login
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=3
+# Wait 3 s so dps-daemon has time to start first

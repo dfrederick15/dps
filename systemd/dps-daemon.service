@@ -1,0 +1,42 @@
+# dps-daemon — Debian Profile Sync background service
+#
+# Install as a systemd USER unit (not system):
+#
+#   mkdir -p ~/.config/systemd/user
+#   cp dps-daemon.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now dps-daemon
+#
+# Logs:
+#   journalctl --user -u dps-daemon -f
+#
+# The binary must be on PATH — copy it after `cargo build --release`:
+#   install -Dm755 target/release/dps-daemon ~/.local/bin/dps-daemon
+
+[Unit]
+Description=Debian Profile Sync Daemon
+Documentation=https://github.com/youruser/dps
+# Start after the user's network session is up
+After=network.target default.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/dps-daemon
+Restart=on-failure
+RestartSec=5s
+
+# Give the daemon time to shut down cleanly (flush any in-flight rsync)
+TimeoutStopSec=30s
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dps-daemon
+
+# Environment
+Environment=RUST_LOG=info
+# Uncomment for debug output:
+# Environment=RUST_LOG=debug
+
+[Install]
+WantedBy=default.target
